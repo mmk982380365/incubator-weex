@@ -24,9 +24,40 @@
 #import "WXURLRewriteProtocol.h"
 #import "WXSDKEngine.h"
 
-#import <JavaScriptCore/JavaScriptCore.h>
+#import <WebKit/WebKit.h>
 
-@interface WXWebView : UIWebView
+NSString * const WXWebViewMessageHandleName = @"WXHandle";
+
+@interface WXWebViewMessageHandle : NSObject <WKScriptMessageHandler>
+
+@property (weak, nonatomic) WXComponent *component;
+
+@end
+
+@implementation WXWebViewMessageHandle
+
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
+    if ([message.name isEqualToString:WXWebViewMessageHandleName]) {
+        NSDictionary *args = message.body;
+        if (args && args.count < 2) {
+            return;
+        }
+        NSDictionary *data = args[@"message"];
+        NSString *origin = args[@"targetOrigin"];
+        if (!data || !origin) {
+            return;
+        }
+        NSDictionary *initDic = @{ @"type" : @"message",
+                                   @"data" : data,
+                                   @"origin" : origin
+        };
+        [self.component fireEvent:@"message" params:initDic];
+    }
+}
+
+@end
+
+@interface WXWebView : WKWebView
 
 @end
 
@@ -41,9 +72,8 @@
 
 @end
 
-@interface WXWebComponent ()
+@interface WXWebComponent ()<WKUIDelegate, WKNavigationDelegate>
 
-@property (nonatomic, strong) JSContext *jsContext;
 
 @property (nonatomic, strong) WXWebView *webview;
 
@@ -60,7 +90,7 @@
 
 @property (nonatomic, assign) BOOL failLoadEvent;
 
-@property (nonatomic, assign) BOOL notifyEvent;
+@property (nonatomic, strong) WXWebViewMessageHandle *messageHandle;
 
 @end
 
@@ -84,53 +114,24 @@ WX_EXPORT_METHOD(@selector(goForward))
     return self;
 }
 
-- (UIView *)loadView
-{
-    return [[WXWebView alloc] init];
+- (UIView *)loadView {
+    return [[WXWebView alloc] initWithFrame:CGRectZero configuration:[WKWebViewConfiguration new]];
 }
 
 - (void)viewDidLoad
 {
+    self.messageHandle = [[WXWebViewMessageHandle alloc] init];
+    self.messageHandle.component = self;
     _webview = (WXWebView *)self.view;
-    _webview.delegate = self;
-    _webview.allowsInlineMediaPlayback = YES;
-    _webview.scalesPageToFit = YES;
+    [_webview.configuration.userContentController addScriptMessageHandler:self.messageHandle name:WXWebViewMessageHandleName];
+    WKUserScript *script = [[WKUserScript alloc] initWithSource:@"window.postMessage = function (message, targetOrigin, transfer) {var info = {};if (message) {info['message'] = message;}if (targetOrigin) {info['targetOrigin'] = targetOrigin;}if (transfer) {info['transfer'] = transfer;}window.webkit.messageHandlers.WXHandle.postMessage(info);}" injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES];
+    [_webview.configuration.userContentController addUserScript:script];
+    _webview.UIDelegate = self;
+    _webview.navigationDelegate = self;
+    _webview.configuration.allowsInlineMediaPlayback = YES;
     [_webview setBackgroundColor:[UIColor clearColor]];
     _webview.opaque = NO;
-    _jsContext = [_webview valueForKeyPath:@"documentView.webView.mainFrame.javaScriptContext"];
-    __weak typeof(self) weakSelf = self;
-
-    // This method will be abandoned slowly.
-    _jsContext[@"$notifyWeex"] = ^(JSValue *data) {
-        if (weakSelf.notifyEvent) {
-            [weakSelf fireEvent:@"notify" params:[data toDictionary]];
-        }
-    };
-
-    //Weex catch postMessage event from web
-    _jsContext[@"postMessage"] = ^() {
-
-        NSArray *args = [JSContext currentArguments];
-
-        if (args && args.count < 2) {
-            return;
-        }
-
-        NSDictionary *data = [args[0] toDictionary];
-        NSString *origin = [args[1] toString];
-
-        if (data == nil) {
-            return;
-        }
-
-        NSDictionary *initDic = @{ @"type" : @"message",
-                                   @"data" : data,
-                                   @"origin" : origin
-        };
-
-        [weakSelf fireEvent:@"message" params:initDic];
-    };
-
+    
     self.source = _inInitsource;
     if (_url) {
         [self loadURL:_url];
@@ -225,7 +226,9 @@ WX_EXPORT_METHOD(@selector(goForward))
 {
     NSString *json = [WXUtility JSONString:data];
     NSString *code = [NSString stringWithFormat:@"(function(){var evt=null;var data=%@;if(typeof CustomEvent==='function'){evt=new CustomEvent('notify',{detail:data})}else{evt=document.createEvent('CustomEvent');evt.initCustomEvent('notify',true,true,data)}document.dispatchEvent(evt)}())", json];
-    [_jsContext evaluateScript:code];
+    [self.webview evaluateJavaScript:code completionHandler:^(id _Nullable obj, NSError * _Nullable error) {
+        
+    }];
 }
 
 // Weex postMessage to web
@@ -249,61 +252,124 @@ WX_EXPORT_METHOD(@selector(goForward))
     NSString *json = [WXUtility JSONString:initDic];
 
     NSString *code = [NSString stringWithFormat:@"(function (){window.dispatchEvent(new MessageEvent('message', %@));}())", json];
-    [_jsContext evaluateScript:code];
+    [self.webview evaluateJavaScript:code completionHandler:^(id _Nullable obj, NSError * _Nullable error) {
+        
+    }];
 }
 
 #pragma mark Webview Delegate
 
-- (NSMutableDictionary<NSString *, id> *)baseInfo
-{
-    NSMutableDictionary<NSString *, id> *info = [NSMutableDictionary new];
-    [info setObject:self.webview.request.URL.absoluteString ?: @"" forKey:@"url"];
-    [info setObject:[self.webview stringByEvaluatingJavaScriptFromString:@"document.title"] ?: @"" forKey:@"title"];
-    [info setObject:@(self.webview.canGoBack) forKey:@"canGoBack"];
-    [info setObject:@(self.webview.canGoForward) forKey:@"canGoForward"];
-    return info;
+- (void)getBaseInfo:(void (^)(NSMutableDictionary<NSString *, id> * baseInfo))callback {
+    [self.webview evaluateJavaScript:@"document.title" completionHandler:^(NSString * _Nullable title, NSError * _Nullable error) {
+        NSMutableDictionary<NSString *, id> *info = [NSMutableDictionary new];
+        [info setObject:self.webview.URL.absoluteString ?: @"" forKey:@"url"];
+        [info setObject:title ?: @"" forKey:@"title"];
+        [info setObject:@(self.webview.canGoBack) forKey:@"canGoBack"];
+        [info setObject:@(self.webview.canGoForward) forKey:@"canGoForward"];
+        !callback ?: callback(info);
+    }];
 }
 
-- (void)webViewDidStartLoad:(UIWebView *)webView
-{
+#pragma mark - WKUIDelegate
+
+/// alert弹框
+/// @param webView webView
+/// @param message 消息
+/// @param frame 框架信息
+/// @param completionHandler 完成回调
+- (void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler();
+    }]];
+    [self.weexInstance.viewController presentViewController:alert animated:YES completion:^{
+        
+    }];
+}
+
+/// confirm弹框
+/// @param webView webView
+/// @param message 消息
+/// @param frame 框架信息
+/// @param completionHandler 完成回调
+- (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL result))completionHandler {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" message:message preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(YES);
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(NO);
+    }]];
+    [self.weexInstance.viewController presentViewController:alert animated:YES completion:^{
+        
+    }];
+}
+
+/// prompt弹框
+/// @param webView webView
+/// @param prompt 消息
+/// @param defaultText 默认内容
+/// @param frame 框架信息
+/// @param completionHandler 完成回调
+- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(nullable NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString * _Nullable result))completionHandler {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"提示" message:prompt preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.text = defaultText;
+        textField.placeholder = prompt;
+    }];
+    [alert addAction:[UIAlertAction actionWithTitle:@"确定" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(alert.textFields.firstObject.text);
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        completionHandler(nil);
+    }]];
+    [self.weexInstance.viewController presentViewController:alert animated:YES completion:^{
+        
+    }];
+}
+
+#pragma mark - WKNavigationDelegate
+
+- (void)webView:(WKWebView *)webView didCommitNavigation:(WKNavigation *)navigation {
     
 }
 
-- (void)webViewDidFinishLoad:(UIWebView *)webView
-{
+- (void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation {
     if (_finishLoadEvent) {
-        NSDictionary *data = [self baseInfo];
-        [self fireEvent:@"pagefinish" params:data domChanges:@{@"attrs": @{@"src":self.webview.request.URL.absoluteString}}];
+        [self getBaseInfo:^(NSMutableDictionary<NSString *,id> *baseInfo) {
+            [self fireEvent:@"pagefinish" params:baseInfo domChanges:@{@"attrs": @{@"src":self.webview.URL.absoluteString}}];
+        }];
     }
 }
 
-- (void)webView:(UIWebView *)webView didFailLoadWithError:(NSError *)error
-{
+- (void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
     if (_failLoadEvent) {
-        NSMutableDictionary *data = [self baseInfo];
-        [data setObject:[error localizedDescription] forKey:@"errorMsg"];
-        [data setObject:[NSString stringWithFormat:@"%ld", (long)error.code] forKey:@"errorCode"];
         
-        NSString * urlString = error.userInfo[NSURLErrorFailingURLStringErrorKey];
-        if (urlString) {
-            // webview.request may not be the real error URL, must get from error.userInfo
-            [data setObject:urlString forKey:@"url"];
-            if (![urlString hasPrefix:@"http"]) {
-                return;
+        [self getBaseInfo:^(NSMutableDictionary<NSString *,id> *data) {
+            [data setObject:[error localizedDescription] forKey:@"errorMsg"];
+            [data setObject:[NSString stringWithFormat:@"%ld", (long)error.code] forKey:@"errorCode"];
+            
+            NSString * urlString = error.userInfo[NSURLErrorFailingURLStringErrorKey];
+            if (urlString) {
+                // webview.request may not be the real error URL, must get from error.userInfo
+                [data setObject:urlString forKey:@"url"];
+                if (![urlString hasPrefix:@"http"]) {
+                    return;
+                }
             }
-        }
-        [self fireEvent:@"error" params:data];
+            [self fireEvent:@"error" params:data];
+        }];
+        
     }
 }
 
-- (BOOL)webView:(UIWebView *)webView shouldStartLoadWithRequest:(NSURLRequest *)request navigationType:(UIWebViewNavigationType)navigationType
-{
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     if (_startLoadEvent) {
         NSMutableDictionary<NSString *, id> *data = [NSMutableDictionary new];
-        [data setObject:request.URL.absoluteString ?:@"" forKey:@"url"];
+        [data setObject:navigationAction.request.URL.absoluteString ?:@"" forKey:@"url"];
         [self fireEvent:@"pagestart" params:data];
     }
-    return YES;
+    decisionHandler(WKNavigationActionPolicyAllow);
 }
 
 @end
