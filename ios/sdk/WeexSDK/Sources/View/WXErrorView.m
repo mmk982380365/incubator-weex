@@ -29,6 +29,12 @@
         UIImageView *imageView = [[UIImageView alloc]initWithFrame:self.bounds];
         NSBundle *bundle = [NSBundle bundleForClass:self.class];
         NSString *file = [bundle pathForResource:@"wx_load_error@3x" ofType:@"png"];
+        if (file == nil) {
+            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+            NSString *resourceBundlePath = [bundle.resourcePath stringByAppendingPathComponent:@"WeexSDK.bundle"];
+            NSBundle *resourceBundle = [NSBundle bundleWithPath:resourceBundlePath];
+            file = [resourceBundle pathForResource:@"wx_load_error@3x" ofType:@"png"];
+        }
 		if (file == nil) {
 			file = [[NSBundle mainBundle] pathForResource:@"wx_load_error@3x" ofType:@"png"];
 		}

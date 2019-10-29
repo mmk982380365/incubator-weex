@@ -230,6 +230,12 @@
 	if (filePath == nil) {
 		filePath = [[NSBundle mainBundle] pathForResource:fileName ofType:@"js"];
 	}
+    if (filePath == nil) {
+        NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+        NSString *resourceBundlePath = [bundle.resourcePath stringByAppendingPathComponent:@"WeexSDK.bundle"];
+        NSBundle *resourceBundle = [NSBundle bundleWithPath:resourceBundlePath];
+        filePath = [resourceBundle pathForResource:fileName ofType:@"js"];
+    }
     NSString *script = [NSString stringWithContentsOfFile:filePath encoding:NSUTF8StringEncoding error:nil];
     [WXSDKEngine initSDKEnvironment:script];
     

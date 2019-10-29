@@ -41,6 +41,12 @@
     if (path == nil) {
         path = [[NSBundle mainBundle] pathForResource:name ofType:@"js"];
     }
+    if (path == nil) {
+        NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+        NSString *resourceBundlePath = [bundle.resourcePath stringByAppendingPathComponent:@"WeexSDK.bundle"];
+        NSBundle *resourceBundle = [NSBundle bundleWithPath:resourceBundlePath];
+        path = [resourceBundle pathForResource:name ofType:@"js"];
+    }
     NSString *script = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
     if (!script) {
         WXLogError(@"%@ js can not found",name);
