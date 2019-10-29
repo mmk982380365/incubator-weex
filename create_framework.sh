@@ -21,3 +21,6 @@ mkdir -p $OUT_PATH
 mv $SDK_PATH $OUT_PATH
 mv $BUNDLE_PATH $OUT_PATH
 
+rm ${OUT_PATH}/WeexSDK.framework/*.js
+rm ${OUT_PATH}/WeexSDK.framework/*.png
+
