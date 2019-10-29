@@ -11,7 +11,7 @@
 		4FD5B3A12368150C007F4548 /* weex-polyfill.js in Resources */ = {isa = PBXBuildFile; fileRef = 4FD5B39D2368150C007F4548 /* weex-polyfill.js */; };
 		4FD5B3A22368150C007F4548 /* weex-rax-api.js in Resources */ = {isa = PBXBuildFile; fileRef = 4FD5B39E2368150C007F4548 /* weex-rax-api.js */; };
 		4FD5B3A32368150C007F4548 /* native-bundle-main.js in Resources */ = {isa = PBXBuildFile; fileRef = 4FD5B39F2368150C007F4548 /* native-bundle-main.js */; };
-		4FD5B3A523681527007F4548 /* wx_load_error@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4FD5B3A423681527007F4548 /* wx_load_error@3x.png */; };
+		4FD5B3A723681600007F4548 /* wx_load_error@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 4FD5B3A623681600007F4548 /* wx_load_error@3x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,7 +20,7 @@
 		4FD5B39D2368150C007F4548 /* weex-polyfill.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = "weex-polyfill.js"; path = "../../../pre-build/weex-polyfill.js"; sourceTree = "<group>"; };
 		4FD5B39E2368150C007F4548 /* weex-rax-api.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = "weex-rax-api.js"; path = "../../../pre-build/weex-rax-api.js"; sourceTree = "<group>"; };
 		4FD5B39F2368150C007F4548 /* native-bundle-main.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; name = "native-bundle-main.js"; path = "../../../pre-build/native-bundle-main.js"; sourceTree = "<group>"; };
-		4FD5B3A423681527007F4548 /* wx_load_error@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "wx_load_error@3x.png"; path = "../../sdk/WeexSDK/Resources/wx_load_error@3x.png"; sourceTree = "<group>"; };
+		4FD5B3A623681600007F4548 /* wx_load_error@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "wx_load_error@3x.png"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +53,7 @@
 		4FD5B39523681485007F4548 /* WeexSDK */ = {
 			isa = PBXGroup;
 			children = (
-				4FD5B3A423681527007F4548 /* wx_load_error@3x.png */,
+				4FD5B3A623681600007F4548 /* wx_load_error@3x.png */,
 				4FD5B39F2368150C007F4548 /* native-bundle-main.js */,
 				4FD5B39C2368150C007F4548 /* weex-main-jsfm.js */,
 				4FD5B39D2368150C007F4548 /* weex-polyfill.js */,
@@ -119,7 +119,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4FD5B3A523681527007F4548 /* wx_load_error@3x.png in Resources */,
+				4FD5B3A723681600007F4548 /* wx_load_error@3x.png in Resources */,
 				4FD5B3A32368150C007F4548 /* native-bundle-main.js in Resources */,
 				4FD5B3A22368150C007F4548 /* weex-rax-api.js in Resources */,
 				4FD5B3A12368150C007F4548 /* weex-polyfill.js in Resources */,
