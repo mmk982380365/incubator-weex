@@ -29,8 +29,8 @@
 
 @synthesize weexInstance;
 
-WX_EXPORT_METHOD(@selector(open:success:failure:))
-WX_EXPORT_METHOD(@selector(close:success:failure:))
+//WX_EXPORT_METHOD(@selector(open:success:failure:))
+//WX_EXPORT_METHOD(@selector(close:success:failure:))
 WX_EXPORT_METHOD(@selector(push:callback:))
 WX_EXPORT_METHOD(@selector(pop:callback:))
 WX_EXPORT_METHOD(@selector(setNavBarBackgroundColor:callback:))
@@ -52,23 +52,23 @@ WX_EXPORT_METHOD(@selector(setNavBarHidden:callback:))
 
 #pragma mark Weex Application Interface
 
-- (void)open:(NSDictionary *)param success:(WXModuleCallback)success failure:(WXModuleCallback)failure
-{
-    id<WXNavigationProtocol> navigator = [self navigator];
-    UIViewController *container = self.weexInstance.viewController;
-    if (navigator && [navigator respondsToSelector:@selector(open:success:failure:withContainer:)]) {
-        [navigator open:param success:success failure:failure withContainer:container];
-    }
-}
-    
-- (void)close:(NSDictionary *)param success:(WXModuleCallback)success failure:(WXModuleCallback)failure
-{
-    id<WXNavigationProtocol> navigator = [self navigator];
-    UIViewController *container = self.weexInstance.viewController;
-    if (navigator && [navigator respondsToSelector:@selector(close:success:failure:withContainer:)]) {
-        [navigator close:param success:success failure:failure withContainer:container];
-    }
-}
+//- (void)open:(NSDictionary *)param success:(WXModuleCallback)success failure:(WXModuleCallback)failure
+//{
+//    id<WXNavigationProtocol> navigator = [self navigator];
+//    UIViewController *container = self.weexInstance.viewController;
+//    if (navigator && [navigator respondsToSelector:@selector(open:success:failure:withContainer:)]) {
+//        [navigator open:param success:success failure:failure withContainer:container];
+//    }
+//}
+//    
+//- (void)close:(NSDictionary *)param success:(WXModuleCallback)success failure:(WXModuleCallback)failure
+//{
+//    id<WXNavigationProtocol> navigator = [self navigator];
+//    UIViewController *container = self.weexInstance.viewController;
+//    if (navigator && [navigator respondsToSelector:@selector(close:success:failure:withContainer:)]) {
+//        [navigator close:param success:success failure:failure withContainer:container];
+//    }
+//}
     
 - (void)push:(NSDictionary *)param callback:(WXModuleCallback)callback
 {
