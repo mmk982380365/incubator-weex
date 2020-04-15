@@ -335,15 +335,16 @@ public class WXInstanceApm {
         addProperty(KEY_PROPERTIES_ERROR_CODE, VALUE_ERROR_CODE_DEFAULT);
         addProperty(KEY_PAGE_PROPERTIES_JSLIB_VERSION, WXEnvironment.JS_LIB_SDK_VERSION);
         addProperty(KEY_PAGE_PROPERTIES_WEEX_VERSION, WXEnvironment.WXSDK_VERSION);
-        addProperty(KEY_PAGE_PROPERTIES_WEEX_VERSION, WXEnvironment.WXSDK_VERSION);
         addStats("wxReInitCount", WXBridgeManager.reInitCount);
         if (null != instance){
             addProperty(KEY_PAGE_PROPERTIES_UIKIT_TYPE, instance.getRenderType());
         }
 
         addProperty("wxUseRuntimeApi",WXEnvironment.sUseRunTimeApi);
-        if (instance != null && (instance.getRenderStrategy() == WXRenderStrategy.DATA_RENDER
-                || instance.getRenderStrategy() == WXRenderStrategy.DATA_RENDER_BINARY)) {
+        if (instance != null && (instance.isUsingEaglePlugin()
+            || instance.getRenderStrategy() == WXRenderStrategy.DATA_RENDER_BINARY //todo only for compat.
+            || instance.getRenderStrategy() == WXRenderStrategy.DATA_RENDER
+        )) {
             addProperty(KEY_PAGE_PROPERTIES_RENDER_TYPE, WXEnvironment.EAGLE);
         }
         if (null != instance) {
@@ -391,7 +392,7 @@ public class WXInstanceApm {
         exceptionRecord.clear();
         mUIHandler.removeCallbacks(jsPerformanceCallBack);
         onStage(KEY_PAGE_STAGES_DESTROY);
-        if (!mHasInit){
+        if (mHasInit && null != apmInstance){
             apmInstance.onEnd();
         }
         mEnd = true;

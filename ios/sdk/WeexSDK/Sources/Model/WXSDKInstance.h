@@ -26,9 +26,13 @@
 #import <WeexSDK/WXApmForInstance.h>
 #import <WeexSDK/WXComponentManager.h>
 
+@protocol WXDarkSchemeProtocol;
+
 NS_ASSUME_NONNULL_BEGIN
 
 extern NSString *const bundleUrlOptionKey;
+
+typedef BOOL (^WXModuleInterceptCallback)(NSString *moduleName, NSString *methodName, NSArray *arguments, NSDictionary *options);
 
 @interface WXSDKInstance : NSObject
 
@@ -193,16 +197,6 @@ typedef enum : NSUInteger {
  * bundleType is the DSL type
  */
 @property (nonatomic, strong) NSString * bundleType;
-
-/**
- *  Which decide whether to use data render,default value is false
- */
-@property (nonatomic, assign, readonly) BOOL dataRender;
-
-/**
- *  Which decide whether to use binary code render, default value is false
- */
-@property (nonatomic, assign, readonly) BOOL wlasmRender;
     
 /**
  *  The callback triggered when the instance fails to render.
@@ -434,7 +428,7 @@ typedef enum : NSUInteger {
 /**
  * Set specific required page width and height to prevent this page using global values.
  */
-- (void)setPageRequiredWidth:(CGFloat)width height:(CGFloat)height;
+- (BOOL)setPageRequiredWidth:(CGFloat)width height:(CGFloat)height;
 
 /**
  * Set specific required view port width prevent this page using global value (750px).
@@ -446,6 +440,68 @@ typedef enum : NSUInteger {
  Useful fot debugging and fixing online bugs.
  */
 + (NSDictionary*)lastPageInfo;
+
+#pragma mark - Scheme Support
+
+typedef enum : NSUInteger {
+    WXAutoInvertingBehaviorDefault,
+    WXAutoInvertingBehaviorAlways,
+    WXAutoInvertingBehaviorNever,
+} WXAutoInvertingBehavior;
+
+/**
+ Set auto-inverting behavior for dark scheme.
+    WXAutoInvertingBehaviorDefault: Use components attribute and
+        defaultInvertValueForRootComponent of WXDarkSchemeProtocol.
+    WXAutoInvertingBehaviorAlways: Always set 'autoInvertForDarkScheme' as
+        true for root component.
+    WXAutoInvertingBehaviorNever: Always set 'autoInvertForDarkScheme' as
+        false for root component.
+ 
+ This function should be called before rendering URL.
+
+ @return Handler instance.
+*/
+- (void)setAutoInvertingBehavior:(WXAutoInvertingBehavior)behavior;
+
+/**
+ Handler for handling color invert.
+
+ @return Handler instance.
+ */
++ (id<WXDarkSchemeProtocol>)darkSchemeColorHandler;
+
+/**
+ Return true if current is dark scheme for this instance.
+ */
+- (BOOL)isDarkScheme;
+
+/**
+ Get/set interface style of current instance.
+ */
+- (NSString*)currentSchemeName;
+- (void)setCurrentSchemeName:(NSString*)name;
+
+/**
+ register/unRegister module intercept
+ */
+- (void)registerModuleIntercept:(NSString*)moduleName callBack:(WXModuleInterceptCallback)callback;
+- (void)unRegisterModuleIntercept:(NSString*)moduleName;
+
+/**
+ call module intercept
+ */
+- (BOOL)moduleInterceptWithModuleName:(NSString*)moduleName methodName:(NSString*)methodName arguments:(NSArray*)arguments options:(NSDictionary*)options;
+
+/**
+ Choose final color between original color and dark-mode one.
+ Also considering invert.
+ */
+- (UIColor*)chooseColor:(UIColor*)originalColor
+       lightSchemeColor:(UIColor*)lightColor
+        darkSchemeColor:(UIColor*)darkColor
+                 invert:(BOOL)invert
+                  scene:(WXColorScene)scene;
 
 /** 
  * Deprecated 
