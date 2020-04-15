@@ -44,7 +44,7 @@ add_definitions(-DDEBUG=1)
 message("ANDROID_PROJECT_DIR:"${ANDROID_PROJECT_DIR})
 set(LOCAL_LIBRARIES_DIR ${ANDROID_PROJECT_DIR}/src/main/jniLibs/${ANDROID_ABI})
 
-if ("${ANDROID_ABI}" STREQUAL "x86")
+if ("${ANDROID_ABI}" STREQUAL "x86" OR "${ANDROID_ABI}" STREQUAL "x86_64")
     # todo
 else ()
     if ("${ENABLE_ASAN}" STREQUAL "true")
@@ -149,6 +149,9 @@ if(ANDROID)
     ./android/bridge/multi_process_and_so_initializer.cpp
     ./android/bridge/multi_so_initializer.cpp
     ./android/wrap/wml_bridge.cpp
+    ./android/wrap/js_context.cpp
+    ./android/wrap/js_processer.h
+    ./android/wrap/js_processer.cpp
     ./android/utils/cache_utils.cpp
     ./android/utils/params_utils.cpp
     ./android/utils/so_utils.cpp
@@ -162,6 +165,7 @@ if(ANDROID)
     ./android/multiprocess/weex_js_connection.cpp
     ./android/utils/jni_load.cc
     ./core/bridge/eagle_bridge.cpp
+    ./core/bridge/eagle_bridge_ext.cpp
     ./core/network/android/default_request_handler.cc
   )
   SET(FINAL_ADD_LIBRARY

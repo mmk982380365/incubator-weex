@@ -229,6 +229,15 @@ typedef enum : NSUInteger {
     }
 }
 
+- (void)updateStyles:(NSDictionary *)styles {
+    [super updateStyles:styles];
+
+    //Need layout if the attribute of columnWidth changed on iPad
+    if ([WXUtility enableAdaptiveLayout]) {
+        [self updateAttributes:self.attributes];
+    }
+}
+
 - (void)updateAttributes:(NSDictionary *)attributes
 {
     [super updateAttributes:attributes];
@@ -252,18 +261,26 @@ typedef enum : NSUInteger {
         }
         
         if (attributes[@"columnWidth"]) {
-            layout.columnWidth = [WXConvert WXLength:attributes[@"columnWidth"] isFloat:YES scaleFactor:scaleFactor];
-            needUpdateLayout = YES;
+            WXLength* columnWidth = [WXConvert WXLength:attributes[@"columnWidth"] isFloat:YES scaleFactor:scaleFactor];
+            if (![columnWidth isEqualToLength:layout.columnWidth]) {
+                layout.columnWidth = columnWidth;
+                needUpdateLayout = YES;
+            }
         }
         
         if (attributes[@"columnCount"]) {
-            layout.columnCount = [WXConvert WXLength:attributes[@"columnCount"] isFloat:NO scaleFactor:1.0];
-            
-            needUpdateLayout = YES;
+            WXLength* columCount = [WXConvert WXLength:attributes[@"columnCount"] isFloat:NO scaleFactor:1.0];
+            if (![columCount isEqualToLength:layout.columnCount]) {
+                layout.columnCount = columCount;
+                needUpdateLayout = YES;
+            }
         }
         if (attributes[@"columnGap"]) {
-            layout.columnGap = [self _floatValueForColumnGap:([WXConvert WXLength:attributes[@"columnGap"] isFloat:YES scaleFactor:scaleFactor])];
-            needUpdateLayout = YES;
+            float columnGap = [self _floatValueForColumnGap:([WXConvert WXLength:attributes[@"columnGap"] isFloat:YES scaleFactor:scaleFactor])];
+            if (columnGap != layout.columnGap) {
+                layout.columnGap = columnGap;
+                needUpdateLayout = YES;
+            }
         }
         if (attributes[@"leftGap"]) {
             layout.leftGap = [WXConvert WXPixelType:attributes[@"leftGap"] scaleFactor:scaleFactor];
