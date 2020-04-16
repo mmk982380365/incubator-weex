@@ -26,6 +26,37 @@
 
 #import <WebKit/WebKit.h>
 
+NSString * const WXWebViewMessageHandleName = @"WXHandle";
+
+@interface WXWebViewMessageHandle : NSObject <WKScriptMessageHandler>
+
+@property (weak, nonatomic) WXComponent *component;
+
+@end
+
+@implementation WXWebViewMessageHandle
+
+- (void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
+    if ([message.name isEqualToString:WXWebViewMessageHandleName]) {
+        NSDictionary *args = message.body;
+        if (args && args.count < 2) {
+            return;
+        }
+        NSDictionary *data = args[@"message"];
+        NSString *origin = args[@"targetOrigin"];
+        if (!data || !origin) {
+            return;
+        }
+        NSDictionary *initDic = @{ @"type" : @"message",
+                                   @"data" : data,
+                                   @"origin" : origin
+        };
+        [self.component fireEvent:@"message" params:initDic];
+    }
+}
+
+@end
+
 @interface WXWebView : WKWebView
 
 @end
@@ -104,42 +135,12 @@ WX_EXPORT_METHOD(@selector(goForward))
     self.messageHandle = [[WXWebViewMessageHandle alloc] init];
     self.messageHandle.component = self;
     _webview = (WXWebView *)self.view;
+    [_webview.configuration.userContentController addScriptMessageHandler:self.messageHandle name:WXWebViewMessageHandleName];
+    WKUserScript *script = [[WKUserScript alloc] initWithSource:@"window.postMessage = function (message, targetOrigin, transfer) {var info = {};if (message) {info['message'] = message;}if (targetOrigin) {info['targetOrigin'] = targetOrigin;}if (transfer) {info['transfer'] = transfer;}window.webkit.messageHandlers.WXHandle.postMessage(info);}" injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES];
+    [_webview.configuration.userContentController addUserScript:script];
     _webview.navigationDelegate = self;
     [_webview setBackgroundColor:[UIColor clearColor]];
     _webview.opaque = NO;
-//    _jsContext = [_webview valueForKeyPath:@"documentView.webView.mainFrame.javaScriptContext"];
-//    __weak typeof(self) weakSelf = self;
-
-    // This method will be abandoned slowly.
-//    _jsContext[@"$notifyWeex"] = ^(JSValue *data) {
-//        if (weakSelf.notifyEvent) {
-//            [weakSelf fireEvent:@"notify" params:[data toDictionary]];
-//        }
-//    };
-//
-//    //Weex catch postMessage event from web
-//    _jsContext[@"postMessage"] = ^() {
-//
-//        NSArray *args = [JSContext currentArguments];
-//
-//        if (args && args.count < 2) {
-//            return;
-//        }
-//
-//        NSDictionary *data = [args[0] toDictionary];
-//        NSString *origin = [args[1] toString];
-//
-//        if (data == nil) {
-//            return;
-//        }
-//
-//        NSDictionary *initDic = @{ @"type" : @"message",
-//                                   @"data" : data,
-//                                   @"origin" : origin
-//        };
-//
-//        [weakSelf fireEvent:@"message" params:initDic];
-//    };
 
     self.source = _inInitsource;
     if (_url) {
